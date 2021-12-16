@@ -4,6 +4,7 @@ const app = express()
 require('dotenv').config()
 const { MongoClient, Admin } = require('mongodb');
 const ObjectId = require('mongodb').ObjectId
+const stripe = require('stripe')(process.env.STRIPE_SECRET)
 const port = process.env.PORT || 4000
 
 
@@ -112,7 +113,7 @@ async function run() {
             //get project 
 
             app.get('/design', async (req, res) => {
-                  const cursor = await designCollection.find({})
+                  const cursor = designCollection.find({})
                   const result = await cursor.toArray()
 
                   res.send(result)
@@ -121,7 +122,7 @@ async function run() {
             //get the service
 
             app.get('/service', async (req, res) => {
-                  const cursor = await serviceCollection.find({})
+                  const cursor = serviceCollection.find({})
                   const result = await cursor.toArray()
                   res.send(result)
             })
@@ -129,12 +130,20 @@ async function run() {
             //load booking
 
             app.get('/booking', async (req, res) => {
-                  const mail = req.query.email
+                  const mail = req.query.email;
                   const query = { email: mail }
                   const cursor = bookingCollection.find(query)
                   const result = await cursor.toArray()
                   res.send(result)
 
+            })
+
+            app.get('/booking/:id', async (req, res) => {
+                  const id = req.params.id;
+                  console.log(id);
+                  const query = { _id: ObjectId(id) }
+                  const result = await bookingCollection.findOne(query)
+                  res.json(result)
             })
 
             //load review
@@ -165,6 +174,17 @@ async function run() {
                         isAdmin = true;
                   }
                   res.json({ admin: isAdmin })
+            })
+
+            app.post('/create-payment-intent', async (req, res) => {
+                  const paymentaInfo = req.body;
+                  const ammount = paymentInfo.price * 100
+                  const paymentIntent = await stripe.paymentIntents.create({
+                        currency: 'usd',
+                        ammount: ammount,
+
+                  })
+                  res.json({ clientSecret: paymentIntent.client_secret })
             })
 
 
